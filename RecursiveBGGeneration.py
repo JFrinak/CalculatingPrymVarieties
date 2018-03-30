@@ -147,11 +147,44 @@ Output_file = str(configs["verts"]) + "V" + str(configs["edges"]) + "E" + str(co
 with open(Output_file, "w") as f:
     count = 0
     if configs["edges"]<configs["verts"]:
-        IMA = [x*configs["edges"]-x*(x-1)/2 for x in range(configs["edges"])]
-        E = Construct_EGraph_no_loops(All_Edges, IMA)
-        All_EGraphs.append(E)
-        f.write(str(la) + "\n")
-        f.write(str(IMA) + "\n\n")
+        lowerDimensionAllEdges = []
+        for i in range(configs["verts"]-1):
+            for j in range(i+1,configs["verts"]-1):
+                A = [0]*2
+                A[0] = i
+                A[1] = j
+                lowerDimensionAllEdges.append(A)
+
+        lowerDimensionGraphShells = LoadGraphs(configs["verts"]-1,configs["edges"]-1,0);
+        for shell in lowerDimensionGraphShells:
+            oldIMA = [x for x in shell.IMA]
+            #Need to adjust oldIMA to the context where we have the right number of vertices.
+            newIMA = [x + lowerDimensionAllEdges[x][0] for x in oldIMA]
+            possibleNewEdges = []
+            for x in range(1, configs["verts"]):
+                possibleNewEdges.append(x * configs["verts"] - x * (x + 1) / 2 - 1)
+            for k in range(len(possibleNewEdges)):
+                IMA = [x for x in newIMA]
+                IMA.append(possibleNewEdges[k])
+                IMA.sort()
+                E = Construct_EGraph_no_loops(All_Edges, IMA)
+                UG = E.G.to_undirected()
+                if E.G.is_connected():
+                    is_new = True
+                    for g in All_Graphs:
+                        if (UG.is_isomorphic(g)):
+                            is_new = False
+                            break
+                    if (is_new):
+                        All_Graphs.append(UG)
+                        All_EGraphs.append(E)
+                        f.write(str(la) + "\n")
+                        f.write(str(IMA) + "\n\n")
+            count += 1
+            num = float(count) / len(lowerDimensionGraphShells)
+            percent = int(num * 100)
+            string = str(percent) + "%"
+            print(string)
         f.write(str(len(All_EGraphs)) + " Base Graphs")
 
     elif configs["loops"] == 0:
@@ -163,17 +196,16 @@ with open(Output_file, "w") as f:
                 IMA.sort()
                 E = Construct_EGraph_no_loops(All_Edges, IMA)
                 UG = E.G.to_undirected()
-                if(E.G.degree().count(1)<3):
-                    is_new = True
-                    for g in All_Graphs:
-                        if (UG.is_isomorphic(g)):
-                            is_new = False
-                            break
-                    if (is_new):
-                        All_Graphs.append(UG)
-                        All_EGraphs.append(E)
-                        f.write(str(la) + "\n")
-                        f.write(str(IMA) + "\n\n")
+                is_new = True
+                for g in All_Graphs:
+                    if (UG.is_isomorphic(g)):
+                        is_new = False
+                        break
+                if (is_new):
+                    All_Graphs.append(UG)
+                    All_EGraphs.append(E)
+                    f.write(str(la) + "\n")
+                    f.write(str(IMA) + "\n\n")
             count += 1
             num = float(count) / len(lowerDimensionGraphShells)
             percent = int(num * 100)
@@ -245,4 +277,9 @@ with open(Output_file, "w") as f:
                     loopList = [x for x in shell.LIMA]
                     IMA = [x for x in shell.IMA]
 
+            count += 1
+            num = float(count) / len(lowerDimensionGraphShells)
+            percent = int(num * 100)
+            string = str(percent) + "%"
+            print(string)
         f.write(str(len(All_EGraphs)) + " Base Graphs")

@@ -70,7 +70,7 @@ def LoadGraphs():
 					E = Construct_EGraph(LIMA, All_Edges, IMA)
 				else:
 					E = Construct_EGraph_no_loops(All_Edges, IMA)
-				if(not 1 in E.G.degree()):
+				if 1 in E.G.degree():
 					All_EGraphs.append(E)
 				row = 0
 			elif (row == 0):
@@ -269,11 +269,11 @@ def is_Cover(PCIM, CVerts, CEdges, cc_edge_locations, cc_edges_isCrossed):
 	# Crossed edges will also satisfy the cover criteria by construction
 	return true
 
-def vertCoverIsAdmissible(E,CVerts):
-	for v in range(configs["verts"]):
-		if E.G.degree()[v]==2 and CVerts[v]==True:
-			return False
-	return True
+# def vertCoverIsAdmissible(E,CVerts):
+# 	for v in range(configs["verts"]):
+# 		if E.G.degree()[v]==2 and CVerts[v]==True:
+# 			return False
+# 	return True
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------Generate All Cover Graphs--------------------------------------------------------------
@@ -281,7 +281,8 @@ def vertCoverIsAdmissible(E,CVerts):
 
 # Load all base Graphs
 All_EGraphs = LoadGraphs()
-print("Done Loading Base Graphs...\n")
+print("Done Loading Base Graphs...")
+print("Total number of base graphs: " + str(len(All_EGraphs)))
 
 APEC = []
 CEdges = [false] * configs["edges"]
@@ -303,7 +304,7 @@ while (True):
 	if (not iterate_Boolean_List(CVerts)):
 		break
 
-All_CGs = []
+totalNumberCGs = 0
 output_file = str(configs["verts"]) + "V" + str(configs["edges"]) + "E" + str(configs["loops"]) + "L_FS_output.txt"
 second_output = str(configs["verts"]) + "V" + str(configs["edges"]) + "E" + str(configs["loops"]) + "L_FS_Graphs.txt"
 
@@ -313,74 +314,74 @@ with open(output_file, "w") as f:
 		for E in All_EGraphs:
 			All_CGS_For_G = []
 			for vc in APVC:
-				if vertCoverIsAdmissible(E, vc):
-					for ec in APEC:
-						E.setNumberCCEdges(vc, ec)
-						# There cannot be any loops in cover graph therefore all loop vertices must be covered.
-						# Recall all loops are already covered by construction of APEC
-						if (E.are_LVs_covered):
-							if (E.numberCCEdges > 0):
-								# Determine which edges are completely covered
-								cc_edge_locations = []
-								# Get locations of completely covered edges
-								for e in range(configs["edges"]):
-									if (E.ccEdges[e]):
-										cc_edge_locations.append(e)
-								cc_edges_iscrossed = [False] * E.numberCCEdges
-								# make sure loops are always crossed
-								for i in range(len(cc_edge_locations)):
-									if (cc_edge_locations[i] < configs["loops"]):
-										#loops come first in cc_edge_locations
-										cc_edges_iscrossed[i] = True
-								while (True):
-									numberCrossedCCEdges = cc_edges_iscrossed.count(True)
-									crossingThreshold = E.numberCCEdges+configs["loops"]-2*numberCrossedCCEdges
-									if(crossingThreshold>=0):
-										Possible_IM = get_Possible_Cover_IM(E, vc, ec, E.ccEdges, cc_edges_iscrossed,
-																			cc_edge_locations)
-										if (is_Cover(Possible_IM, vc, ec, cc_edge_locations, cc_edges_iscrossed)):
-											CG = CoverGraph(Possible_IM, ec, vc, configs)
-											if (CG.G.is_connected() and CG.FS and CG.Basis_Linear_Forms.nrows() > 0):
-												is_new = True
-												for cg in All_CGS_For_G:
-													if (CG.G.is_isomorphic(cg.G)):
-														is_new = False
-														break
-												if (is_new):
-													All_CGS_For_G.append(CG)
-													f.write(str(CG.Basis_Linear_Forms))
-													f.write("\n\n")
-													g.write(CG.output())
+				for ec in APEC:
+					E.setNumberCCEdges(vc, ec)
+					# There cannot be any loops in cover graph therefore all loop vertices must be covered.
+					# Recall all loops are already covered by construction of APEC
+					if (E.are_LVs_covered):
+						if (E.numberCCEdges > 0):
+							# Determine which edges are completely covered
+							cc_edge_locations = []
+							# Get locations of completely covered edges
+							for e in range(configs["edges"]):
+								if (E.ccEdges[e]):
+									cc_edge_locations.append(e)
+							cc_edges_iscrossed = [False] * E.numberCCEdges
+							# make sure loops are always crossed
+							for i in range(len(cc_edge_locations)):
+								if (cc_edge_locations[i] < configs["loops"]):
+									#loops come first in cc_edge_locations
+									cc_edges_iscrossed[i] = True
+							while (True):
+								numberCrossedCCEdges = cc_edges_iscrossed.count(True)
+								crossingThreshold = E.numberCCEdges+configs["loops"]-2*numberCrossedCCEdges
+								if(crossingThreshold>=0):
+									Possible_IM = get_Possible_Cover_IM(E, vc, ec, E.ccEdges, cc_edges_iscrossed,
+																		cc_edge_locations)
+									if (is_Cover(Possible_IM, vc, ec, cc_edge_locations, cc_edges_iscrossed)):
+										CG = CoverGraph(Possible_IM, ec, vc, configs)
+										if (CG.G.is_connected() and CG.FS and CG.Basis_Linear_Forms.nrows() > 0):
+											is_new = True
+											for cg in All_CGS_For_G:
+												if (CG.G.is_isomorphic(cg.G)):
+													is_new = False
+													break
+											if (is_new):
+												All_CGS_For_G.append(CG)
+												f.write(str(CG.Basis_Linear_Forms))
+												f.write("\n\n")
+												g.write(CG.output())
+												totalNumberCGs+=1
 
-									if (not iterate_Boolean_List(cc_edges_iscrossed)):
-										break
+								if (not iterate_Boolean_List(cc_edges_iscrossed)):
+									break
 
-							# No CCEdges
-							else:
-								Possible_IM = get_Possible_Cover_IM_no_CCEdges(E, vc, ec)
-								if (is_Cover_no_CCEdges(Possible_IM, vc, ec)):
-									CG = CoverGraph(Possible_IM, ec, vc, configs)
-									if (CG.G.is_connected() and CG.FS and CG.Basis_Linear_Forms.nrows() > 0):
-										is_new = True
-										for cg in All_CGS_For_G:
-											if (CG.G.is_isomorphic(cg.G)):
-												is_new = False
-												break
-										if (is_new):
-											All_CGS_For_G.append(CG)
-											f.write(str(CG.Basis_Linear_Forms))
-											f.write("\n\n")
-											g.write(CG.output())
-			All_CGs.extend(All_CGS_For_G)
+						# No CCEdges
+						else:
+							Possible_IM = get_Possible_Cover_IM_no_CCEdges(E, vc, ec)
+							if (is_Cover_no_CCEdges(Possible_IM, vc, ec)):
+								CG = CoverGraph(Possible_IM, ec, vc, configs)
+								if (CG.G.is_connected() and CG.FS and CG.Basis_Linear_Forms.nrows() > 0):
+									is_new = True
+									for cg in All_CGS_For_G:
+										if (CG.G.is_isomorphic(cg.G)):
+											is_new = False
+											break
+									if (is_new):
+										All_CGS_For_G.append(CG)
+										f.write(str(CG.Basis_Linear_Forms))
+										f.write("\n\n")
+										g.write(CG.output())
+										totalNumberCGs+=1
 			count += 1
 			num = float(count) / len(All_EGraphs)
 			percent = int(num * 100)
 			string = str(percent) + "%"
 			print(string)
 
-		if(len(All_CGs)>0):
+		if(totalNumberCGs>0):
 			g.write("\n\n")
-			g.write("Total Number of Cover Graphs: " + str(len(All_CGs)))
+			g.write("Total Number of Cover Graphs: " + str(totalNumberCGs))
 			f.write("\n\n")
-			f.write("Total Number of Cover Graphs: " + str(len(All_CGs)))
-print(str(len(All_CGs)) + " Cover Graphs\n")
+			f.write("Total Number of Cover Graphs: " + str(totalNumberCGs))
+print(str(totalNumberCGs) + " Cover Graphs\n")
